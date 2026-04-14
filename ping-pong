@@ -1,0 +1,231 @@
+import turtle
+import os
+
+# ===== CONFIG =====
+LIMITE_PONTOS = 5
+VEL_BOLA = 1.5  # 🔥 velocidade fixa da bola
+
+# ===== RECORD =====
+def carregar_recorde():
+    if os.path.exists("recorde.txt"):
+        with open("recorde.txt", "r") as f:
+            return int(f.read())
+    return 0
+
+def salvar_recorde(pontos):
+    with open("recorde.txt", "w") as f:
+        f.write(str(pontos))
+
+recorde = carregar_recorde()
+
+# ===== TELA =====
+tela = turtle.Screen()
+tela.title("Pong Retrô 1980")
+tela.bgcolor("black")
+tela.setup(width=800, height=600)
+tela.tracer(0)
+
+# ===== MENU =====
+menu = turtle.Turtle()
+menu.color("cyan")
+menu.hideturtle()
+menu.penup()
+
+menu.goto(0, 100)
+menu.write("PONG 1980", align="center", font=("Courier", 36, "bold"))
+
+menu.goto(0, 20)
+menu.write("1 - 1 Player", align="center", font=("Courier", 18, "normal"))
+
+menu.goto(0, -20)
+menu.write("2 - 2 Players", align="center", font=("Courier", 18, "normal"))
+
+modo_jogo = None
+
+def escolher_1p():
+    global modo_jogo
+    modo_jogo = 1
+
+def escolher_2p():
+    global modo_jogo
+    modo_jogo = 2
+
+tela.listen()
+tela.onkeypress(escolher_1p, "1")
+tela.onkeypress(escolher_2p, "2")
+
+while modo_jogo is None:
+    tela.update()
+
+menu.clear()
+
+# ===== PLAYERS =====
+def criar_player(x):
+    p = turtle.Turtle()
+    p.shape("square")
+    p.color("cyan")
+    p.shapesize(stretch_wid=5, stretch_len=1)
+    p.penup()
+    p.goto(x, 0)
+    return p
+
+p1 = criar_player(-350)
+p2 = criar_player(350)
+
+# ===== BOLA =====
+bola = turtle.Turtle()
+bola.shape("circle")
+bola.color("white")
+bola.penup()
+bola.goto(0, 0)
+
+# 🔥 velocidade constante
+bola.dx = VEL_BOLA
+bola.dy = VEL_BOLA
+
+# ===== PLACAR =====
+pontos_p1 = 0
+pontos_p2 = 0
+
+placar = turtle.Turtle()
+placar.color("cyan")
+placar.penup()
+placar.hideturtle()
+placar.goto(0, 260)
+
+def atualizar_placar():
+    placar.clear()
+    placar.goto(0, 260)
+    placar.write(f"P1: {pontos_p1} | P2: {pontos_p2} | RECORDE: {recorde}",
+                 align="center", font=("Courier", 18, "bold"))
+
+def mostrar_vencedor(texto):
+    placar.goto(0, 0)
+    placar.write(texto, align="center", font=("Courier", 24, "bold"))
+
+# ===== RESTART =====
+jogo_rodando = True
+
+def reiniciar_jogo():
+    global pontos_p1, pontos_p2, jogo_rodando
+
+    pontos_p1 = 0
+    pontos_p2 = 0
+
+    p1.goto(-350, 0)
+    p2.goto(350, 0)
+
+    bola.goto(0, 0)
+    bola.dx = VEL_BOLA
+    bola.dy = VEL_BOLA
+
+    placar.clear()
+    atualizar_placar()
+
+    jogo_rodando = True
+
+tela.onkeypress(reiniciar_jogo, "r")
+
+atualizar_placar()
+
+# ===== CONTROLES SUAVES =====
+keys = {}
+
+def keydown(k): keys[k] = True
+def keyup(k): keys[k] = False
+
+tela.listen()
+
+tela.onkeypress(lambda: keydown("w"), "w")
+tela.onkeyrelease(lambda: keyup("w"), "w")
+
+tela.onkeypress(lambda: keydown("s"), "s")
+tela.onkeyrelease(lambda: keyup("s"), "s")
+
+if modo_jogo == 2:
+    tela.onkeypress(lambda: keydown("Up"), "Up")
+    tela.onkeyrelease(lambda: keyup("Up"), "Up")
+
+    tela.onkeypress(lambda: keydown("Down"), "Down")
+    tela.onkeyrelease(lambda: keyup("Down"), "Down")
+
+# ===== LOOP =====
+velocidade_barra = 5
+
+while True:
+    tela.update()
+
+    if jogo_rodando:
+
+        # movimento
+        if keys.get("w") and p1.ycor() < 250:
+            p1.sety(p1.ycor() + velocidade_barra)
+
+        if keys.get("s") and p1.ycor() > -250:
+            p1.sety(p1.ycor() - velocidade_barra)
+
+        if modo_jogo == 2:
+            if keys.get("Up") and p2.ycor() < 250:
+                p2.sety(p2.ycor() + velocidade_barra)
+
+            if keys.get("Down") and p2.ycor() > -250:
+                p2.sety(p2.ycor() - velocidade_barra)
+
+        # CPU
+        if modo_jogo == 1:
+            if abs(p2.ycor() - bola.ycor()) > 10:
+                if p2.ycor() < bola.ycor():
+                    p2.sety(p2.ycor() + 3)
+                else:
+                    p2.sety(p2.ycor() - 3)
+
+        # bola
+        bola.setx(bola.xcor() + bola.dx)
+        bola.sety(bola.ycor() + bola.dy)
+
+        if bola.ycor() > 290 or bola.ycor() < -290:
+            bola.dy *= -1
+
+        # ponto
+        if bola.xcor() > 390:
+            pontos_p1 += 1
+            bola.goto(0, 0)
+            bola.dx = -VEL_BOLA
+            bola.dy = VEL_BOLA
+
+        if bola.xcor() < -390:
+            pontos_p2 += 1
+            bola.goto(0, 0)
+            bola.dx = VEL_BOLA
+            bola.dy = VEL_BOLA
+
+        # colisões SEM aceleração
+        if (bola.xcor() < -330 and abs(bola.ycor() - p1.ycor()) < 50):
+            bola.dx = abs(VEL_BOLA)
+            bola.shapesize(1.5, 1.5)
+
+        elif (bola.xcor() > 330 and abs(bola.ycor() - p2.ycor()) < 50):
+            bola.dx = -abs(VEL_BOLA)
+            bola.shapesize(1.5, 1.5)
+
+        else:
+            bola.shapesize(1, 1)
+
+        # recorde
+        maior = max(pontos_p1, pontos_p2)
+        if maior > recorde:
+            recorde = maior
+            salvar_recorde(recorde)
+
+        atualizar_placar()
+
+        # vitória
+        if pontos_p1 == LIMITE_PONTOS:
+            mostrar_vencedor("PLAYER 1 VENCEU!\nPressione R para reiniciar")
+            jogo_rodando = False
+
+        if pontos_p2 == LIMITE_PONTOS:
+            mostrar_vencedor("PLAYER 2 VENCEU!\nPressione R para reiniciar")
+            jogo_rodando = False
+
+turtle.done()
